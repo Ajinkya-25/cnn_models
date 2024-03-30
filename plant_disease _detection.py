@@ -1,63 +1,73 @@
 import tensorflow as tf
 from tensorflow.keras import layers
+import matplotlib.pyplot as plt
+
 data_train = tf.keras.preprocessing.image_dataset_from_directory(
-    "F:\datasets\plants",
+    "F:/datasets/plants",
     validation_split=0.2,
     subset="training",
     shuffle=True,
-    seed=42
+    seed=42,
+    image_size=(256, 256),
+    batch_size=32,
 )
 
 data_test = tf.keras.preprocessing.image_dataset_from_directory(
-    "F:\datasets\plants",
+    "F:/datasets/plants",
     validation_split=0.2,
     subset="validation",
     shuffle=True,
-    seed=42
+    seed=42,
+    image_size=(256, 256),
+    batch_size=32,
 )
 
 
-train_ds = data_train
-x_train, y_train = next(iter(train_ds))
-
-# Normalizing the pixel values of test data
-test_ds = data_test
-x_test, y_test = next(iter(test_ds))
-
-# Data augmentation
-augmentation = tf.keras.Sequential([
-    tf.keras.layers.RandomFlip('horizontal'),
-    tf.keras.layers.RandomRotation(0.3),
-    tf.keras.layers.RandomContrast(0.2)
-   # tf.keras.layers.AveragePooling2D()
+data_augmentation = tf.keras.Sequential([
+    layers.RandomFlip("horizontal"),
+    layers.RandomRotation(0.2),
+    layers.RandomZoom(0.2),
+    layers.RandomContrast(0.2),
 ])
 
-aug_x_train = augmentation(x_train)
-
-model=tf.keras.Sequential([
-
-    layers.InputLayer(input_shape=(256,256,3)),
-    layers.RandomContrast(0.5),
-    layers.BatchNormalization(),
-    layers.Conv2D(32,kernel_size=(7,7)),
-    layers.MaxPool2D(),
-   # layers.Conv2D(64,kernel_size=(5,5)),
-    #layers.MaxPool2D(),
-    layers.Conv2D(128,kernel_size=(3,3),activation='relu'),
-    layers.MaxPool2D(),
-    #layers.Conv2D(128,kernel_size=(3,3),activation='relu'),
-    #layers.MaxPool2D(),
-
+model = tf.keras.Sequential([
+    layers.Rescaling(1./255, input_shape=(256, 256, 3)),
+    data_augmentation,
+    layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+    layers.MaxPooling2D(pool_size=(2, 2)),
+    layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+    layers.MaxPooling2D(pool_size=(2, 2)),
+    layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
+    layers.MaxPooling2D(pool_size=(2, 2)),
     layers.Flatten(),
-    layers.Dropout(0.3),
-    layers.Dense(128,activation='relu'),
-    layers.Dense(32,activation='relu'),
-    layers.Dense(15,activation='relu')
-
-
+    layers.Dropout(0.5),
+    layers.Dense(128, activation="relu"),
+    layers.Dense(15, activation="softmax")
 ])
 
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(lr=0.001), #lr can be changed
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
 
-model.compile(optimizer=tf.keras.optimizers.Adamax(lr=0.00013),metrics=['accuracy'],loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True))
-model.fit(aug_x_train,y_train,epochs=20,validation_data=(x_test,y_test))
-#loss ,acc=model.evaluate(x_test,y_test)
+
+history = model.fit(
+    data_train,
+    validation_data=data_test,
+    epochs=100
+)
+
+
+loss, accuracy = model.evaluate(data_test)
+print("Test Accuracy:", accuracy)
+
+
+plt.plot(history.history["val_accuracy"], label="val_accuracy")
+plt.plot(history.history["accuracy"],label="accuracy")
+
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.show()
+
