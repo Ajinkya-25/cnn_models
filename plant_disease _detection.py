@@ -1,9 +1,10 @@
+import keras
 import tensorflow as tf
 from tensorflow.keras import layers
 import matplotlib.pyplot as plt
 
 data_train = tf.keras.preprocessing.image_dataset_from_directory(
-    "F:/datasets/plants",
+    "F:\cnn models\data123",
     validation_split=0.2,
     subset="training",
     shuffle=True,
@@ -13,7 +14,7 @@ data_train = tf.keras.preprocessing.image_dataset_from_directory(
 )
 
 data_test = tf.keras.preprocessing.image_dataset_from_directory(
-    "F:/datasets/plants",
+    "F:\cnn models\data123",
     validation_split=0.2,
     subset="validation",
     shuffle=True,
@@ -22,27 +23,27 @@ data_test = tf.keras.preprocessing.image_dataset_from_directory(
     batch_size=32,
 )
 
+data_train = data_train.prefetch(tf.data.experimental.AUTOTUNE)
+data_test = data_test.prefetch(tf.data.experimental.AUTOTUNE)
 
-data_augmentation = tf.keras.Sequential([
-    layers.RandomFlip("horizontal"),
-    layers.RandomRotation(0.2),
-    layers.RandomZoom(0.2),
-    layers.RandomContrast(0.2),
+augmentation=keras.Sequential([
+    layers.RandomContrast(0.3)
 ])
-
 model = tf.keras.Sequential([
     layers.Rescaling(1./255, input_shape=(256, 256, 3)),
-    data_augmentation,
-    layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+    augmentation,
+    layers.Conv2D(32, kernel_size=(5, 5), activation="relu"),
     layers.MaxPooling2D(pool_size=(2, 2)),
     layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
     layers.MaxPooling2D(pool_size=(2, 2)),
-    layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
+    layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+    layers.MaxPooling2D(pool_size=(2, 2)),
+    layers.Conv2D(32, kernel_size=(2, 2), activation="relu"),
     layers.MaxPooling2D(pool_size=(2, 2)),
     layers.Flatten(),
-    layers.Dropout(0.5),
-    layers.Dense(128, activation="relu"),
-    layers.Dense(15, activation="softmax")
+    layers.Dropout(0.1),
+    layers.Dense(196, activation="relu"),
+    layers.Dense(17, activation="softmax")
 ])
 
 model.compile(
@@ -70,4 +71,3 @@ plt.xlabel("Epoch")
 plt.ylabel("Accuracy")
 plt.legend()
 plt.show()
-
